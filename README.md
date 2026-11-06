@@ -16,7 +16,7 @@
 
 ## 安装
 
-需要 Node.js `^22.19.0 || >=24.0.0`，以及 DeepSeek Harness（已在 **0.2.2-rc.1** 与 **0.2.1-rc.5** 上验证；后者的 bundle patch 机制同样完整）。
+需要 Node.js `^22.19.0 || >=24.0.0`，以及 DeepSeek Harness。bundle 格式按 **0.2.2-rc.1** 的规范编写；**0.2.1-rc.5** 上已完成安装、配置树与运行时的端到端实测（向下兼容，该版本同样具备完整的 `cordis.patch.yml` / `dsh.profile.bundles` 机制）。
 
 ```bash
 # Web profile（最常用）
