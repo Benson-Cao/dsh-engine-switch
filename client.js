@@ -36,9 +36,13 @@ window.__ModuleLoader__.load({
       switch: '切换',
       switching: '切换中…',
       remove: '删除',
-      engines: '已登记引擎',
+      engines: '引擎状态',
+      groupSub: '选中哪个，网关就转发到哪个；只换执行者，不迁移会话。',
+      kindLabel: '类型',
       empty: '还没有登记引擎',
       addEngine: '添加引擎',
+      nameLabel: '名称',
+      urlLabel: '地址',
       labelPlaceholder: '名称，如 书房 5060Ti / 腾讯云 dsh',
       urlPlaceholder: 'http://192.168.1.10:3080 或 https://dsh.example.com',
       add: '添加',
@@ -74,9 +78,13 @@ window.__ModuleLoader__.load({
       switch: 'Switch',
       switching: 'Switching…',
       remove: 'Remove',
-      engines: 'Registered engines',
+      engines: 'Engines',
+      groupSub: 'Whichever you pick becomes the gateway upstream; sessions are not migrated.',
+      kindLabel: 'Type',
       empty: 'No engine registered yet',
       addEngine: 'Add an engine',
+      nameLabel: 'Name',
+      urlLabel: 'Address',
       labelPlaceholder: 'Name, e.g. Study 5060Ti / Tencent Cloud dsh',
       urlPlaceholder: 'http://192.168.1.10:3080 or https://dsh.example.com',
       add: 'Add',
@@ -165,69 +173,87 @@ window.__ModuleLoader__.load({
 .dshes_page{box-sizing:border-box;height:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;
   padding:0 clamp(24px,4vw,48px) 40px;color:var(--dsw-alias-label-primary);
   font-family:inherit;font-size:13px;line-height:1.55}
-.dshes_page>*{flex:none;width:100%;max-width:960px}
+.dshes_page>*{flex:none;width:100%;max-width:820px}
 .dshes_head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
   padding-top:calc(28px + var(--dsh-frame-top-clearance,0px))}
 .dshes_heading{min-width:0}
-.dshes_title{margin:0;font-size:20px;font-weight:500;line-height:28px}
+.dshes_title{margin:0;font-size:20px;font-weight:600;line-height:28px}
 .dshes_intro{margin:4px 0 0;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary)}
 .dshes_toolbar{display:flex;align-items:center;gap:8px;white-space:nowrap}
-.dshes_btn{height:32px;padding:0 12px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;
-  border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);
+.dshes_btn{height:32px;padding:0 12px;border-radius:9px;font:inherit;font-size:13px;cursor:pointer;
+  border:1px solid var(--dsw-alias-border-l2);background:transparent;
+  color:var(--dsw-alias-label-secondary)}
+.dshes_btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);
   color:var(--dsw-alias-label-primary)}
-.dshes_btn:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
-.dshes_btn:disabled{opacity:.55;cursor:default}
+.dshes_btn:disabled{opacity:.5;cursor:default}
 .dshes_btn:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}
-.dshes_btn.is_primary{background:var(--dsw-alias-button-primary-fill);border-color:transparent;
-  color:var(--dsw-alias-label-primary-inverted)}
-.dshes_btn.is_primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}
-.dshes_btn.is_danger{color:var(--dsw-alias-state-error-primary);border-color:transparent;background:transparent}
-.dshes_btn.is_danger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}
-.dshes_meta{margin:14px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary);
+.dshes_meta{margin:12px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary);
   display:flex;flex-wrap:wrap;gap:4px 14px}
 .dshes_meta code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
   color:var(--dsw-alias-label-secondary)}
-.dshes_alert{margin-top:14px;padding:10px 12px;border-radius:9px;font-size:12.5px;
+.dshes_alert{margin-top:14px;padding:10px 14px;border-radius:12px;font-size:12.5px;
   border:1px solid var(--dsw-alias-state-error-secondary);color:var(--dsw-alias-state-error-primary);
   background:var(--dsw-alias-bg-layer-1);word-break:break-all}
-.dshes_toast{margin-top:12px;font-size:12.5px;color:var(--dsw-alias-state-success-primary);min-height:18px}
+.dshes_toast{margin-top:10px;font-size:12.5px;color:var(--dsw-alias-state-success-primary);min-height:18px}
 .dshes_toast.is_bad{color:var(--dsw-alias-state-error-primary)}
-.dshes_card{margin-top:20px;padding:16px;border-radius:12px;
-  border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}
-.dshes_cardHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.dshes_cardTitle{margin:0;font-size:13px;font-weight:500;color:var(--dsw-alias-label-secondary)}
-.dshes_row{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;text-align:left;
-  padding:10px 12px;margin-bottom:8px;border-radius:9px;cursor:pointer;
-  border:1px solid var(--dsw-alias-border-l2);background:transparent;color:inherit;font:inherit}
-.dshes_row:last-of-type{margin-bottom:0}
-.dshes_row:hover{background:var(--dsw-alias-interactive-bg-hover)}
-.dshes_row.is_current{border-color:var(--dsw-alias-state-business-primary);
-  background:var(--dsw-alias-interactive-bg-hover-accent);cursor:default}
-.dshes_dot{flex:none;width:8px;height:8px;border-radius:50%;border:1px solid var(--dsw-alias-label-tertiary)}
-.dshes_row.is_current .dshes_dot{border-color:var(--dsw-alias-state-business-primary);
-  background:var(--dsw-alias-state-business-primary)}
-.dshes_rowMain{flex:1;min-width:0}
-.dshes_rowTop{display:flex;align-items:center;gap:6px;min-width:0}
-.dshes_label{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dshes_tag{flex:none;font-size:10px;line-height:16px;padding:0 6px;border-radius:4px;
-  background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-tertiary)}
-.dshes_tag.is_current{color:var(--dsw-alias-state-business-primary)}
-.dshes_url{margin-top:2px;font-size:11.5px;color:var(--dsw-alias-label-tertiary);
-  word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.dshes_probe{margin-top:2px;font-size:11.5px;color:var(--dsw-alias-label-secondary)}
+
+/* 分组标题 + 卡片列表：与手机端同一套视觉语言 */
+.dshes_group{margin:26px 0 2px;font-size:15px;font-weight:600}
+.dshes_groupSub{margin:0 0 12px;font-size:12.5px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}
+.dshes_card{display:flex;align-items:center;gap:13px;box-sizing:border-box;width:100%;
+  padding:12px 16px;margin:0 0 10px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);
+  color:inherit;font:inherit;text-align:left}
+.dshes_card:last-of-type{margin-bottom:0}
+.dshes_card:hover{background:var(--dsw-alias-interactive-bg-hover)}
+.dshes_card.is_current{cursor:default;
+  border-color:var(--dsw-alias-state-business-primary);
+  background:var(--dsw-alias-interactive-bg-hover-accent)}
+.dshes_card:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}
+.dshes_icon{flex:none;display:flex;align-items:center;justify-content:center;width:26px;
+  color:var(--dsw-alias-label-secondary)}
+.dshes_card.is_current .dshes_icon{color:var(--dsw-alias-state-business-primary)}
+.dshes_main{flex:1;min-width:0}
+.dshes_label{display:block;font-size:15px;font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dshes_sub{display:block;margin-top:2px;font-size:12.5px;color:var(--dsw-alias-label-tertiary);
+  word-break:break-all}
+.dshes_probe{display:block;margin-top:2px;font-size:11.5px;color:var(--dsw-alias-label-secondary)}
 .dshes_probe.is_bad{color:var(--dsw-alias-state-warn-primary)}
-.dshes_rowActions{flex:none;display:flex;align-items:center;gap:6px}
-.dshes_form{display:flex;flex-wrap:wrap;gap:8px}
-.dshes_field{display:flex;flex-direction:column;gap:4px;flex:1 1 180px;min-width:0}
-.dshes_input,.dshes_select{box-sizing:border-box;width:100%;height:32px;padding:0 10px;border-radius:8px;
-  font:inherit;font-size:13px;color:var(--dsw-alias-label-primary);
-  border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base)}
+.dshes_badge{flex:none;font-size:11px;padding:2px 8px;border-radius:6px;
+  color:var(--dsw-alias-state-business-primary);
+  background:var(--dsw-alias-interactive-bg-hover-accent)}
+.dshes_actions{flex:none;display:flex;align-items:center;gap:4px}
+.dshes_link{border:0;background:none;padding:6px 8px;border-radius:7px;font:inherit;
+  font-size:13px;cursor:pointer;color:var(--dsw-alias-state-business-primary)}
+.dshes_link:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover)}
+.dshes_danger{color:var(--dsw-alias-state-error-primary)}
+.dshes_danger:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover-danger)}
+
+/* 表单：卡片化字段 + 分段控件 */
+.dshes_fieldCard{display:block;box-sizing:border-box;width:100%;padding:12px 16px;margin:0 0 10px;
+  border-radius:14px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}
+.dshes_fieldCard>span{display:block;font-size:12.5px;color:var(--dsw-alias-label-tertiary)}
+.dshes_input{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:0;border:0;
+  background:none;font:inherit;font-size:15px;color:var(--dsw-alias-label-primary);outline:none}
 .dshes_input::placeholder{color:var(--dsw-alias-label-tertiary)}
-.dshes_input:focus-visible,.dshes_select:focus-visible{
-  outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}
-.dshes_formAction{display:flex;align-items:flex-end}
-.dshes_empty{padding:14px 0;font-size:12.5px;color:var(--dsw-alias-label-tertiary)}
-.dshes_tip{margin:16px 0 0;font-size:11.5px;line-height:1.75;color:var(--dsw-alias-label-tertiary)}
+.dshes_fieldCard:focus-within{border-color:var(--dsw-alias-state-business-primary)}
+.dshes_sectionLabel{margin:16px 2px 10px;font-size:13px;color:var(--dsw-alias-label-tertiary)}
+.dshes_seg{display:flex;gap:10px;max-width:360px}
+.dshes_segBtn{flex:1;height:40px;border-radius:12px;font:inherit;font-size:14px;cursor:pointer;
+  border:1px solid transparent;background:var(--dsw-alias-bg-layer-1);
+  color:var(--dsw-alias-label-secondary)}
+.dshes_segBtn[aria-pressed="true"]{
+  border-color:var(--dsw-alias-state-business-primary);
+  background:var(--dsw-alias-interactive-bg-hover-accent);
+  color:var(--dsw-alias-label-primary)}
+.dshes_segBtn:focus-visible{outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}
+.dshes_primary{margin-top:18px;height:40px;padding:0 22px;border:0;border-radius:12px;font:inherit;
+  font-size:14px;font-weight:500;cursor:pointer;color:var(--dsw-alias-label-primary-inverted);
+  background:var(--dsw-alias-button-primary-fill)}
+.dshes_primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover)}
+.dshes_primary:disabled{opacity:.5;cursor:default}
+.dshes_note{margin:22px 0 0;font-size:12px;line-height:1.75;color:var(--dsw-alias-label-tertiary)}
 @media (max-width:767px){.dshes_head{flex-direction:column}.dshes_toolbar{width:100%}}
 `;
 
@@ -323,7 +349,7 @@ window.__ModuleLoader__.load({
         if (!url) return;
         setBusy('__add');
         try {
-          const j = await api('/api/engines', {
+          const j = await api('/engines', {
             method: 'POST',
             body: JSON.stringify({ label, url, kind: form.kind }),
           });
@@ -372,6 +398,61 @@ window.__ModuleLoader__.load({
 
       const engines = (data && data.engines) || [];
 
+      const kindIcon = (engine) => {
+        const open = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+          strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
+        if (engine.local) {
+          return h('svg', open,
+            h('rect', { x: 4, y: 3, width: 16, height: 12, rx: 2 }),
+            h('path', { d: 'M2 19h20' }));
+        }
+        if (engine.kind === 'server') {
+          return h('svg', open,
+            h('path', { d: 'M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.2 9.2 3.9 3.9 0 0 0 7 19h10.5Z' }));
+        }
+        return h('svg', open,
+          h('rect', { x: 3, y: 4, width: 18, height: 12, rx: 2 }),
+          h('path', { d: 'M8 20h8M12 16v4' }));
+      };
+
+      const row = (engine) => {
+        const current = !!data && engine.id === data.currentId;
+        const state = probes[engine.id];
+        const working = busy === engine.id;
+        return h('div', {
+          key: engine.id,
+          className: 'dshes_card' + (current ? ' is_current' : ''),
+          role: 'button',
+          tabIndex: 0,
+          onClick: () => switchTo(engine),
+          onKeyDown: (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); switchTo(engine); }
+          },
+        },
+        h('span', { className: 'dshes_icon' }, kindIcon(engine)),
+        h('span', { className: 'dshes_main' },
+          h('span', { className: 'dshes_label' }, engine.label),
+          h('span', { className: 'dshes_sub' }, kindLabel(t, engine) + ' · ' + engine.url),
+          state ? h('span', {
+            className: 'dshes_probe' + (/unreachable|failed|401|403|404|5\d\d/i.test(state) ? ' is_bad' : ''),
+          }, state) : null),
+        current
+          ? h('span', { className: 'dshes_badge' }, t('current'))
+          : h('span', { className: 'dshes_actions' },
+            h('button', {
+              type: 'button',
+              className: 'dshes_link',
+              disabled: working || !!busy,
+              onClick: (ev) => { ev.stopPropagation(); switchTo(engine); },
+            }, working ? t('switching') : t('switch')),
+            engine.local ? null : h('button', {
+              type: 'button',
+              className: 'dshes_link dshes_danger',
+              disabled: !!busy,
+              onClick: (ev) => { ev.stopPropagation(); removeEngine(engine); },
+            }, t('remove'))));
+      };
+
       return h('div', { className: 'dshes_page' },
         h('div', { className: 'dshes_head' },
           h('div', { className: 'dshes_heading' },
@@ -400,83 +481,56 @@ window.__ModuleLoader__.load({
           className: 'dshes_toast' + (toast.bad ? ' is_bad' : ''),
         }, toast.text) : null,
 
-        h('section', { className: 'dshes_card' },
-          h('div', { className: 'dshes_cardHead' },
-            h('h2', { className: 'dshes_cardTitle' }, t('engines'))),
-          engines.length === 0
-            ? h('div', { className: 'dshes_empty' }, data ? t('empty') : '…')
-            : engines.map(engine => {
-              const current = !!data && engine.id === data.currentId;
-              const state = probes[engine.id];
-              const working = busy === engine.id;
-              return h('div', {
-                key: engine.id,
-                className: 'dshes_row' + (current ? ' is_current' : ''),
-                role: 'button',
-                tabIndex: 0,
-                onClick: () => switchTo(engine),
-                onKeyDown: (ev) => {
-                  if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); switchTo(engine); }
-                },
-              },
-              h('span', { className: 'dshes_dot' }),
-              h('div', { className: 'dshes_rowMain' },
-                h('div', { className: 'dshes_rowTop' },
-                  h('span', { className: 'dshes_label' }, engine.label),
-                  h('span', { className: 'dshes_tag' }, kindLabel(t, engine)),
-                  current ? h('span', { className: 'dshes_tag is_current' }, t('current')) : null),
-                h('div', { className: 'dshes_url' }, engine.url),
-                state ? h('div', {
-                  className: 'dshes_probe' + (/unreachable|failed|401|403|404|5\d\d/i.test(state) ? ' is_bad' : ''),
-                }, state) : null),
-              h('div', { className: 'dshes_rowActions' },
-                current ? null : h('button', {
-                  type: 'button',
-                  className: 'dshes_btn is_primary',
-                  disabled: working || !!busy,
-                  onClick: (ev) => { ev.stopPropagation(); switchTo(engine); },
-                }, working ? t('switching') : t('switch')),
-                engine.local ? null : h('button', {
-                  type: 'button',
-                  className: 'dshes_btn is_danger',
-                  disabled: !!busy,
-                  onClick: (ev) => { ev.stopPropagation(); removeEngine(engine); },
-                }, t('remove'))));
+        h('div', null,
+          h('div', { className: 'dshes_group' }, t('engines')),
+          h('p', { className: 'dshes_groupSub' }, t('groupSub')),
+          data === null
+            ? h('div', { className: 'dshes_card' },
+              h('span', { className: 'dshes_main' }, h('span', { className: 'dshes_label' }, '…')))
+            : (engines.length === 0
+              ? h('div', { className: 'dshes_card' },
+                h('span', { className: 'dshes_main' },
+                  h('span', { className: 'dshes_label' }, t('empty'))))
+              : engines.map(row)),
+          h('p', { className: 'dshes_note' }, t('tip'))),
+
+        h('div', null,
+          h('div', { className: 'dshes_group' }, t('addEngine')),
+          h('label', { className: 'dshes_fieldCard' },
+            h('span', null, t('nameLabel')),
+            h('input', {
+              className: 'dshes_input', value: form.label, placeholder: t('labelPlaceholder'),
+              autoComplete: 'off',
+              onChange: (ev) => setForm(Object.assign({}, form, { label: ev.target.value })),
             })),
-
-        h('section', { className: 'dshes_card' },
-          h('div', { className: 'dshes_cardHead' },
-            h('h2', { className: 'dshes_cardTitle' }, t('addEngine'))),
-          h('div', { className: 'dshes_form' },
-            h('label', { className: 'dshes_field' },
-              h('input', {
-                className: 'dshes_input', value: form.label, placeholder: t('labelPlaceholder'),
-                autoComplete: 'off',
-                onChange: (ev) => setForm(Object.assign({}, form, { label: ev.target.value })),
-              })),
-            h('label', { className: 'dshes_field' },
-              h('input', {
-                className: 'dshes_input', value: form.url, placeholder: t('urlPlaceholder'),
-                autoComplete: 'off', inputMode: 'url',
-                onChange: (ev) => setForm(Object.assign({}, form, { url: ev.target.value })),
-                onKeyDown: (ev) => { if (ev.key === 'Enter') addEngine(); },
-              })),
-            h('label', { className: 'dshes_field', style: { flex: '0 0 120px' } },
-              h('select', {
-                className: 'dshes_select', value: form.kind,
-                onChange: (ev) => setForm(Object.assign({}, form, { kind: ev.target.value })),
-              },
-              h('option', { value: 'pc' }, t('kindPc')),
-              h('option', { value: 'server' }, t('kindServer')))),
-            h('div', { className: 'dshes_formAction' },
-              h('button', {
-                type: 'button',
-                className: 'dshes_btn is_primary',
-                disabled: busy === '__add' || !form.url.trim() || !data,
-                onClick: addEngine,
-              }, busy === '__add' ? t('adding') : t('add'))))),
-
-        h('p', { className: 'dshes_tip' }, t('tip')));
+          h('label', { className: 'dshes_fieldCard' },
+            h('span', null, t('urlLabel')),
+            h('input', {
+              className: 'dshes_input', value: form.url, placeholder: t('urlPlaceholder'),
+              autoComplete: 'off', inputMode: 'url',
+              onChange: (ev) => setForm(Object.assign({}, form, { url: ev.target.value })),
+              onKeyDown: (ev) => { if (ev.key === 'Enter') addEngine(); },
+            })),
+          h('div', { className: 'dshes_sectionLabel' }, t('kindLabel')),
+          h('div', { className: 'dshes_seg' },
+            h('button', {
+              type: 'button',
+              className: 'dshes_segBtn',
+              'aria-pressed': form.kind === 'pc' ? 'true' : 'false',
+              onClick: () => setForm(Object.assign({}, form, { kind: 'pc' })),
+            }, t('kindPc')),
+            h('button', {
+              type: 'button',
+              className: 'dshes_segBtn',
+              'aria-pressed': form.kind === 'server' ? 'true' : 'false',
+              onClick: () => setForm(Object.assign({}, form, { kind: 'server' })),
+            }, t('kindServer'))),
+          h('button', {
+            type: 'button',
+            className: 'dshes_primary',
+            disabled: busy === '__add' || !form.url.trim() || !data,
+            onClick: addEngine,
+          }, busy === '__add' ? t('adding') : t('add'))));
     }
 
     /* ------------------------------------------------------------------ */

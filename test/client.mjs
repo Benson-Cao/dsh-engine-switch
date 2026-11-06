@@ -114,7 +114,7 @@ assert.equal(tree.type, 'div');
 assert.equal(tree.props.className, 'dshes_page');
 
 const text = collectText(tree);
-for (const expected of ['引擎切换', '已登记引擎', '添加引擎', '刷新']) {
+for (const expected of ['引擎切换', '引擎状态', '添加引擎', '刷新']) {
   assert.ok(text.includes(expected), `panel renders "${expected}"`);
 }
 assert.ok(STYLE.length > 0, 'panel styles installed');
