@@ -123,6 +123,13 @@ async function main() {
     assert.equal((await r.json()).ok, false);
     console.log('  ok  remove works and keeps the last engine');
 
+    // 8. A second listener on the same port must degrade, never crash the host.
+    const dup = makeGateway(GATEWAY_PORT);
+    const dupAddr = await dup.listen();
+    assert.equal(dupAddr, null, 'duplicate listen should resolve null, not throw');
+    await dup.close();
+    console.log('  ok  duplicate mount degrades gracefully (no EADDRINUSE crash)');
+
     console.log('\nALL SMOKE TESTS PASSED');
   } finally {
     await gw.close();

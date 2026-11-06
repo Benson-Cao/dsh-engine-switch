@@ -52,7 +52,7 @@ npm 包名方式则要求插件先发布到 registry。
 
 ```bash
 cd dsh-engine-switch && npm pack
-mkdir -p /tmp/es-pack && tar -xzf dsh-engine-switch-0.1.0.tgz -C /tmp/es-pack
+mkdir -p /tmp/es-pack && tar -xzf dsh-engine-switch-0.1.1.tgz -C /tmp/es-pack
 export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 adb connect <手机IP>:<adb端口>
 adb push "$(cygpath -m /tmp/es-pack/package)" /data/local/tmp/dsh-engine-switch

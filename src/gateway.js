@@ -274,6 +274,16 @@ export function createGateway(settings) {
       try { s.end('HTTP/1.1 400 Bad Request\r\n\r\n'); } catch (ignored) { }
     });
     return new Promise(resolve => {
+      // A duplicate mount (or a leftover listener during a DSH restart) must
+      // never become an unhandled rejection: on Node 24 that is fatal and takes
+      // the whole DSH process down with it. Degrade to a no-op instead.
+      server.on('error', e => {
+        console.warn('[dsh-engine-switch] listen failed: ' + e.message);
+        const s = server;
+        server = null;
+        try { if (s) s.close(); } catch (ignored) { }
+        resolve(null);
+      });
       server.listen(settings.port, settings.host, () => resolve(server.address()));
     });
   }
