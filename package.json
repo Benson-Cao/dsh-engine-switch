@@ -1,6 +1,6 @@
 {
   "name": "dsh-engine-switch",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "One phone-friendly gateway to switch DeepSeek Harness between local, desktop and server engines.",
   "type": "module",
   "main": "index.js",

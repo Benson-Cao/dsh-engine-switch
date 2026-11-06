@@ -55,6 +55,45 @@ export function apply(ctx, config = {}) {
     console.warn('[dsh-engine-switch] listen rejected: ' + e.message);
   });
 
+  /**
+   * Desktop shells load the UI from `dsh-app://app` and forward only path-shaped
+   * requests to this Host (`forwardWebRequest` rebuilds the URL from pathname +
+   * search), so the in-app panel cannot fetch `127.0.0.1:3082` no matter what
+   * CORS says. Mount the same JSON API on the Host's own web server under a
+   * private prefix; the panel then works same-origin on desktop and on `dsh web`.
+   */
+  ctx.inject(['webServer'], scope => {
+    scope.effect(() => {
+      const STRIP = '/engine-switch/api';
+      const loopback = (addr) => typeof addr === 'string'
+        && (addr === '::1' || addr.startsWith('127.') || addr.startsWith('::ffff:127.'));
+      const dispose = scope.webServer.register({
+        kind: 'prefix',
+        path: STRIP,
+        handler: (req, res) => {
+          // Only this machine may use the unauthenticated copy. A profile bound
+          // to a LAN address still reaches the token-gated gateway instead.
+          if (!loopback(req.socket && req.socket.remoteAddress)) {
+            res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
+            return res.end(JSON.stringify({ ok: false, error: 'loopback only' }));
+          }
+          const rest = req.url.slice(STRIP.length) || '/';
+          const suffix = rest.startsWith('/') ? rest : '/' + rest;
+          const url = new URL('/api' + suffix, 'http://engine-switch.invalid');
+          Promise.resolve(gateway.handleApi(req, res, url)).catch(e => {
+            try {
+              if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' });
+              res.end(JSON.stringify({ ok: false, error: e.message }));
+            } catch (ignored) { /* socket already gone */ }
+          });
+        },
+      });
+      return () => {
+        if (typeof dispose === 'function') dispose();
+      };
+    }, 'dsh-engine-switch: host-mounted API');
+  });
+
   ctx.effect(() => {
     // One disposer owns both the listener and every live socket, so close()
     // can await them in the right order.

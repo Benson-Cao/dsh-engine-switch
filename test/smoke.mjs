@@ -63,7 +63,25 @@ async function main() {
     assert.equal(j.engines[0].local, true);
     console.log('  ok  registry seeded with local engine');
 
-    // 3. add + switch
+    // 3. the shared handler the Host mounts at /engine-switch/api answers the
+    //    same route table (desktop shells can only reach same-origin paths)
+    assert.equal(typeof gw.handleApi, 'function', 'gateway exports handleApi for the Host mount');
+    const seen = await new Promise(resolve => {
+      const res = {
+        headersSent: false,
+        status: 0,
+        body: '',
+        writeHead(code) { this.status = code; this.headersSent = true; return this; },
+        setHeader() {},
+        end(chunk) { this.body = chunk || ''; resolve({ status: this.status, body: this.body }); },
+      };
+      gw.handleApi({ method: 'GET', headers: {}, url: '/api/engines' }, res, new URL('http://x/api/engines'));
+    });
+    assert.equal(seen.status, 200);
+    assert.equal(JSON.parse(seen.body).ok, true);
+    console.log('  ok  handleApi serves the registry for the Host mount');
+
+    // 4. add + switch
     r = await fetch(`${gwUrl}/api/engines`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ label: '书房', url: 'http://192.168.1.10:3080', kind: 'pc' }),
@@ -89,7 +107,7 @@ async function main() {
       body: JSON.stringify({ id: 'local' }),
     });
 
-    // 4. HTML proxy stays byte-clean (no injected entry: the sidebar panel owns it)
+    // 5. HTML proxy stays byte-clean (no injected entry: the sidebar panel owns it)
     r = await fetch(`${gwUrl}/`);
     let body = await r.text();
     assert.match(body, /UPSTREAM OK/);
@@ -103,14 +121,14 @@ async function main() {
     assert.equal(j.host, new URL(upstreamUrl).host);
     console.log('  ok  Host header rewritten to upstream');
 
-    // 5. streaming response must not be buffered into a single chunk
+    // 6. streaming response must not be buffered into a single chunk
     r = await fetch(`${gwUrl}/stream`);
     body = await r.text();
     assert.match(body, /data: one/);
     assert.match(body, /data: two/);
     console.log('  ok  streaming / SSE response passes through');
 
-    // 6. CORS: the in-app panel calls the API from the DSH page origin
+    // 7. CORS: the in-app panel calls the API from the DSH page origin
     let opt = await fetch(`${gwUrl}/api/engines`, {
       method: 'OPTIONS',
       headers: { origin: 'dsh://host', 'access-control-request-method': 'POST' },
@@ -126,21 +144,21 @@ async function main() {
     assert.equal(r.headers.get('access-control-allow-origin'), 'http://127.0.0.1:3080');
     console.log('  ok  CORS answers local shells only');
 
-    // 7. token gate
+    // 8. token gate
     r = await fetch(`http://127.0.0.1:${GATEWAY_PORT_AUTH}/api/engines`);
     assert.equal(r.status, 401);
     r = await fetch(`http://127.0.0.1:${GATEWAY_PORT_AUTH}/api/engines?token=s3cret`);
     assert.equal(r.status, 200);
     console.log('  ok  token gate rejects anonymous requests');
 
-    // 8. remove + last-engine guard
+    // 9. remove + last-engine guard
     r = await fetch(`${gwUrl}/api/engines/${pcId}`, { method: 'DELETE' });
     assert.equal((await r.json()).ok, true);
     r = await fetch(`${gwUrl}/api/engines/local`, { method: 'DELETE' });
     assert.equal((await r.json()).ok, false);
     console.log('  ok  remove works and keeps the last engine');
 
-    // 9. A second listener on the same port must degrade, never crash the host.
+    // 10. A second listener on the same port must degrade, never crash the host.
     const dup = makeGateway(GATEWAY_PORT);
     const dupAddr = await dup.listen();
     assert.equal(dupAddr, null, 'duplicate listen should resolve null, not throw');

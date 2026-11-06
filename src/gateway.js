@@ -297,7 +297,9 @@ export function createGateway(settings) {
     });
   }
 
-  /** Single disposer owns the listener and all live sockets (ordered cleanup). */
+  /**
+   * Single disposer owns the listener and all live sockets (ordered cleanup).
+   */
   function close() {
     return new Promise(resolve => {
       if (!server) return resolve();
@@ -311,5 +313,8 @@ export function createGateway(settings) {
     });
   }
 
-  return { listen, close, registry };
+  // Exposed so the Host half can mount the same API on DSH's own web server:
+  // the desktop shell forwards only same-origin paths to the Host, so the
+  // in-app panel can never reach this loopback listener directly.
+  return { listen, close, registry, handleApi };
 }

@@ -102,45 +102,55 @@ window.__ModuleLoader__.load({
     /* Gateway API                                                        */
     /* ------------------------------------------------------------------ */
 
-    let base = null;
+    /**
+     * Where the panel may read the registry, in priority order. The suffixes are
+     * gateway-shaped ("/engines"), so each candidate only owns the prefix:
+     *
+     *   1. an explicit override, for a port other than the default
+     *   2. the current origin — a page served *by* the gateway answers /api here
+     *   3. /engine-switch/api — the Host-mounted copy, the only reachable path
+     *      when the desktop shell forwards same-origin paths to the Host
+     *   4. the default loopback listener, last resort for plain browsers
+     */
+    let endpoint = null;
 
     function candidates() {
       const out = [];
       const override = typeof window === 'undefined' ? undefined : window.__DSH_ENGINE_SWITCH__;
-      if (typeof override === 'string' && override.trim()) out.push(override.trim().replace(/\/+$/, ''));
-      // Served by the gateway itself (phone browser, or a WebView pointed at it).
-      if (typeof location !== 'undefined' && /^https?:$/.test(location.protocol)) {
-        const origin = location.origin;
-        if (out.indexOf(origin) === -1) out.push(origin);
+      if (typeof override === 'string' && override.trim()) {
+        const root = override.trim().replace(/\/+$/, '');
+        out.push({ display: root, build: (suffix) => root + '/api' + suffix });
       }
-      if (out.indexOf(DEFAULT_BASE) === -1) out.push(DEFAULT_BASE);
+      out.push({ display: 'origin', build: (suffix) => '/api' + suffix });
+      out.push({ display: '/engine-switch/api', build: (suffix) => '/engine-switch/api' + suffix });
+      out.push({ display: DEFAULT_BASE, build: (suffix) => DEFAULT_BASE + '/api' + suffix });
       return out;
     }
 
-    async function resolveBase() {
-      if (base) return base;
+    async function resolveEndpoint() {
+      if (endpoint) return endpoint;
       const tried = [];
       for (const candidate of candidates()) {
-        tried.push(candidate);
+        tried.push(candidate.display);
         try {
-          const r = await fetch(candidate + '/api/engines', {
+          const r = await fetch(candidate.build('/engines'), {
             cache: 'no-store',
             headers: { accept: 'application/json' },
           });
           if (!r.ok) continue;
           const j = await r.json();
           if (j && j.ok) {
-            base = candidate;
-            return base;
+            endpoint = candidate;
+            return endpoint;
           }
         } catch (e) { /* try the next candidate */ }
       }
       throw new Error(tried.join(' · '));
     }
 
-    async function api(path, init) {
-      const root = await resolveBase();
-      const r = await fetch(root + path, Object.assign({
+    async function api(suffix, init) {
+      const target = await resolveEndpoint();
+      const r = await fetch(target.build(suffix), Object.assign({
         cache: 'no-store',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
       }, init));
@@ -275,10 +285,10 @@ window.__ModuleLoader__.load({
 
       const load = React.useCallback(async () => {
         try {
-          const j = await api('/api/engines');
+          const j = await api('/engines');
           if (!j || !j.ok) throw new Error(j && j.error ? j.error : 'bad response');
           setData(j);
-          setGateway(base || '');
+          setGateway(endpoint ? endpoint.display : '');
           setError('');
         } catch (e) {
           setError(t('gatewayUnreachable') + (e && e.message ? '：' + e.message : ''));
@@ -292,7 +302,7 @@ window.__ModuleLoader__.load({
         if (data && engine.id === data.currentId) { say(t('alreadyCurrent')); return; }
         setBusy(engine.id);
         try {
-          const j = await api('/api/engines/switch', {
+          const j = await api('/engines/switch', {
             method: 'POST',
             body: JSON.stringify({ id: engine.id }),
           });
@@ -332,7 +342,7 @@ window.__ModuleLoader__.load({
         if (!engine || busy) return;
         setBusy(engine.id);
         try {
-          const j = await api('/api/engines/' + encodeURIComponent(engine.id), { method: 'DELETE' });
+          const j = await api('/engines/' + encodeURIComponent(engine.id), { method: 'DELETE' });
           if (!j.ok) { say(j.error || t('removeFailed'), true); return; }
           say(t('removed'));
           await load();
@@ -347,7 +357,7 @@ window.__ModuleLoader__.load({
         if (busy) return;
         setBusy('__probe');
         try {
-          const j = await api('/api/engines/probe');
+          const j = await api('/engines/probe');
           if (!j.ok) { say(t('probeFailed'), true); return; }
           const next = {};
           for (const r of j.results || []) next[r.id] = r.state;
