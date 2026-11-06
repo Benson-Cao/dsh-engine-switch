@@ -16,7 +16,7 @@
 
 ## 安装
 
-需要 Node.js `^22.19.0 || >=24.0.0`，以及 DeepSeek Harness（在 0.2.2-rc.1 上验证）。
+需要 Node.js `^22.19.0 || >=24.0.0`，以及 DeepSeek Harness（已在 **0.2.2-rc.1** 与 **0.2.1-rc.5** 上验证；后者的 bundle patch 机制同样完整）。
 
 ```bash
 # Web profile（最常用）
@@ -32,6 +32,52 @@ dsh --profile es-test
 桌面版请在「插件」页安装后**完全退出并重开** DSH（bundle 需要进程重启才挂载）。
 
 启动日志出现 `[dsh-engine-switch] ready on http://127.0.0.1:3082/` 即成功。
+
+### 手机 App（`com.dsh.harness`）安装
+
+⚠️ **不要在这个 App 的插件页直接填 GitHub 仓库 URL。** 它的 Termux 运行时里
+只有 `bash / node / pnpm`，**没有 git**。`dsh plugin add` 会把 Git URL 转给
+`pnpm add`，后者调 `git ls-remote` 必然失败：
+
+```
+ERR_PNPM_GIT_RESOLVE_FAILED
+```
+
+App 会把这个退出码 1 误报成「没有写入权限，无法安装」——与权限无关。
+npm 包名方式则要求插件先发布到 registry。
+
+已实测可行的办法是**本地路径安装**（pnpm 用 `link:`，完全不碰 git 与网络）：
+
+**1. PC 侧打包推送**（Git Bash 下必须关掉 MSYS 路径转换，否则 `/data/...` 会被当成本地路径拼到 `D:/Program Files/...` 下）
+
+```bash
+cd dsh-engine-switch && npm pack
+mkdir -p /tmp/es-pack && tar -xzf dsh-engine-switch-0.1.0.tgz -C /tmp/es-pack
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+adb connect <手机IP>:<adb端口>
+adb push "$(cygpath -m /tmp/es-pack/package)" /data/local/tmp/dsh-engine-switch
+adb shell "run-as com.dsh.harness sh -c 'cp -r /data/local/tmp/dsh-engine-switch files/home/dsh-engine-switch'"
+```
+
+**2. 设备侧用 dsh CLI 安装**（Termux 二进制硬编码了 `com.termux` 路径，必须显式覆盖环境变量，否则报 `libz.so.1 not found` 或 `OPENSSL_CONF ... Permission denied`）
+
+```sh
+P=/data/user/0/com.dsh.harness/files/usr
+H=/data/user/0/com.dsh.harness/files/home
+cd $H/.dsh/profiles/web
+export LD_LIBRARY_PATH=$P/lib OPENSSL_CONF=$P/etc/tls/openssl.cnf \
+       OPENSSL_MODULES=$P/lib/ossl-modules HOME=$H PREFIX=$P \
+       TMPDIR=$P/tmp PATH=$P/bin:/system/bin
+$P/bin/node $H/node_modules/@deepseek-ai/dsh/lib/bin.js \
+  plugin --profile web add $H/dsh-engine-switch
+```
+
+成功时输出 `+ dsh-engine-switch <- ../../../dsh-engine-switch`。
+`dsh plugin add` 会同时把包名追加到 `dsh.profile.bundles`；用
+`--dump-config` 应能看到 `- id: dsh-engine-switch` 这一行。
+**重启一次 DSH 服务**后插件生效。
+
+在手机 Node 上单独验证网关：`$P/bin/node test/smoke.mjs`（8 项冒烟测试）。
 
 ## 使用
 
