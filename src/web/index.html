@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DSH 引擎切换</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;padding:18px 16px 40px;background:#141b23;color:#e6edf5;
+       font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+  h1{font-size:17px;font-weight:500;margin:0 0 4px}
+  .sub{color:#8fa1b5;font-size:12px;margin:0 0 18px}
+  .card{background:#1b2430;border:1px solid rgba(255,255,255,.10);
+        border-radius:12px;padding:14px;margin-bottom:14px}
+  .card h2{font-size:13px;font-weight:500;margin:0 0 10px;color:#cfdcea}
+  .item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+        background:transparent;border:1px solid rgba(255,255,255,.10);border-radius:9px;
+        padding:10px 12px;margin-bottom:8px;color:#dce6f0;cursor:pointer;font-size:13px}
+  .item.cur{border-color:#4c9fd8;background:rgba(76,159,216,.14)}
+  .item .meta{flex:1;min-width:0}
+  .item small{display:block;color:#8fa1b5;font-size:11px;word-break:break-all;margin-top:2px}
+  .item .del{border:0;background:none;color:#e08b8b;font-size:18px;cursor:pointer;padding:0 4px}
+  input,select{width:100%;margin:5px 0;padding:9px 10px;border-radius:7px;
+        border:1px solid rgba(255,255,255,.18);background:#111820;color:#e6edf5;font-size:13px}
+  button.act{width:100%;margin-top:8px;padding:10px;border:0;border-radius:7px;
+        background:#2b6cb0;color:#fff;font-size:13px;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,.18)}
+  .row{display:flex;gap:8px}
+  .row button{flex:1}
+  .msg{min-height:18px;font-size:12px;color:#8fd0a8;margin-top:8px}
+  .msg.bad{color:#e08b8b}
+  .tip{font-size:11px;color:#8fa1b5;line-height:1.7;margin-top:14px}
+  .tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;
+       background:rgba(255,255,255,.10);color:#b8c8d8;margin-left:6px}
+</style>
+</head>
+<body>
+<h1>DSH 引擎切换</h1>
+<p class="sub">一个入口，在本机 / 多台电脑 / 服务器引擎之间切换</p>
+
+<div class="card">
+  <h2>已登记引擎</h2>
+  <div id="list"></div>
+  <button class="act ghost" id="probe" type="button">探测全部可达性</button>
+  <button class="act" id="enter" type="button">进入当前引擎的 DSH</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<div class="card">
+  <h2>添加引擎</h2>
+  <input id="label" placeholder="名称，如 书房 5060Ti / 腾讯云 dsh" autocomplete="off">
+  <input id="url" placeholder="http://192.168.1.10:3080 或 https://dsh.example.com" autocomplete="off" inputmode="url">
+  <select id="kind"><option value="pc">电脑</option><option value="server">服务器</option></select>
+  <button class="act" id="add" type="button">添加</button>
+</div>
+
+<p class="tip">
+  网关只监听 loopback 时无需密钥；绑定局域网/公网必须配置 <code>token</code>。<br>
+  切换只改变请求转发目标，<b>不迁移会话</b>：各引擎有自己的 $DSH_HOME 与会话日志，
+  跨引擎可见性需另配 NAS 同步。<br>
+  上游自签 HTTPS 默认允许（<code>allowSelfSigned</code>），请只登记你信任的主机。
+</p>
+
+<script>
+(function () {
+  var TOKEN = new URLSearchParams(location.search).get('token') || '';
+  var Q = TOKEN ? '?token=' + encodeURIComponent(TOKEN) : '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function api(path, method, body) {
+    return fetch(path + Q, {
+      method: method || 'GET',
+      headers: { 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(function (r) { return r.json(); });
+  }
+  function say(text, bad) {
+    $('msg').textContent = text || '';
+    $('msg').className = 'msg' + (bad ? ' bad' : '');
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  var state = { engines: [], currentId: '' };
+
+  function render() {
+    var h = '';
+    state.engines.forEach(function (e) {
+      var cur = e.id === state.currentId;
+      var kind = e.local ? '本机' : (e.kind === 'server' ? '服务器' : '电脑');
+      h += '<div class="item' + (cur ? ' cur' : '') + '" data-id="' + esc(e.id) + '">'
+        + '<div class="meta">' + (cur ? '● ' : '○ ') + esc(e.label)
+        + '<span class="tag">' + kind + '</span>'
+        + '<small>' + esc(e.url) + '</small></div>'
+        + (e.local ? '' : '<button class="del" data-del="' + esc(e.id) + '" type="button">×</button>')
+        + '</div>';
+    });
+    $('list').innerHTML = h || '<p class="sub">暂无引擎</p>';
+  }
+
+  function load() {
+    return api('/api/engines').then(function (r) {
+      if (!r.ok) { say(r.error || '读取失败', true); return; }
+      state = r; render();
+    }).catch(function (e) { say(String(e), true); });
+  }
+
+  $('list').addEventListener('click', function (ev) {
+    var del = ev.target.getAttribute && ev.target.getAttribute('data-del');
+    if (del) {
+      ev.stopPropagation();
+      api('/api/engines/' + encodeURIComponent(del), 'DELETE').then(function (r) {
+        say(r.ok ? '已删除' : (r.error || '删除失败'), !r.ok); return load();
+      });
+      return;
+    }
+    var item = ev.target.closest ? ev.target.closest('.item') : null;
+    if (!item) return;
+    var id = item.getAttribute('data-id');
+    if (id === state.currentId) { say('已经是当前引擎'); return; }
+    api('/api/engines/switch', 'POST', { id: id }).then(function (r) {
+      if (!r.ok) { say(r.error || '切换失败', true); return; }
+      say('已切换，点「进入 DSH」生效'); return load();
+    });
+  });
+
+  $('add').addEventListener('click', function () {
+    api('/api/engines', 'POST', {
+      label: $('label').value.trim(), url: $('url').value.trim(), kind: $('kind').value,
+    }).then(function (r) {
+      if (!r.ok) { say(r.error || '添加失败', true); return; }
+      $('label').value = ''; $('url').value = '';
+      say('已添加'); return load();
+    });
+  });
+
+  $('probe').addEventListener('click', function () {
+    say('探测中…');
+    api('/api/engines/probe').then(function (r) {
+      if (!r.ok) { say('探测失败', true); return; }
+      say(r.results.map(function (x) { return x.label + ': ' + x.state; }).join(' · '));
+    });
+  });
+
+  $('enter').addEventListener('click', function () { location.href = '/' + Q; });
+
+  load();
+})();
+</script>
+</body>
+</html>

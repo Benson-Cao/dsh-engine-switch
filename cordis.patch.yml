@@ -1,0 +1,11 @@
+# Bundle patch layer: insert one stable row into the composition.
+# `name` must be the package name (not a source-relative path) for distributed bundles.
+- insert:
+    - id: dsh-engine-switch
+      name: dsh-engine-switch
+      config:
+        host: 127.0.0.1
+        port: 3082
+        selfUrl: http://127.0.0.1:3080
+        token: ''
+        allowSelfSigned: true

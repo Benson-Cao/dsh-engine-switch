@@ -1,0 +1,41 @@
+{
+  "name": "dsh-engine-switch",
+  "version": "0.1.0",
+  "description": "One phone-friendly gateway to switch DeepSeek Harness between local, desktop and server engines.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "src/"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "remote",
+    "gateway",
+    "mobile"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Benson-Cao/dsh-engine-switch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Benson-Cao/dsh-engine-switch/issues"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check src/registry.js && node --check src/gateway.js && node --check test/smoke.mjs",
+    "test": "node test/smoke.mjs"
+  }
+}
