@@ -89,12 +89,13 @@ async function main() {
       body: JSON.stringify({ id: 'local' }),
     });
 
-    // 4. HTML proxy + floating button injection + Host rewrite
+    // 4. HTML proxy stays byte-clean (no injected entry: the sidebar panel owns it)
     r = await fetch(`${gwUrl}/`);
     let body = await r.text();
     assert.match(body, /UPSTREAM OK/);
-    assert.match(body, /__switch\//);
-    console.log('  ok  "/" proxies HTML with picker button injected');
+    assert.ok(!body.includes('__switch/'), 'proxy must not inject a picker button');
+    assert.ok(!body.includes('<a href'), 'proxy must not inject markup');
+    console.log('  ok  "/" proxies HTML untouched (no injected entry)');
 
     r = await fetch(`${gwUrl}/api/ping`);
     j = await r.json();
@@ -109,21 +110,37 @@ async function main() {
     assert.match(body, /data: two/);
     console.log('  ok  streaming / SSE response passes through');
 
-    // 6. token gate
+    // 6. CORS: the in-app panel calls the API from the DSH page origin
+    let opt = await fetch(`${gwUrl}/api/engines`, {
+      method: 'OPTIONS',
+      headers: { origin: 'dsh://host', 'access-control-request-method': 'POST' },
+    });
+    assert.equal(opt.status, 204);
+    assert.equal(opt.headers.get('access-control-allow-origin'), 'dsh://host');
+    opt = await fetch(`${gwUrl}/api/engines`, {
+      method: 'OPTIONS',
+      headers: { origin: 'https://evil.example', 'access-control-request-method': 'POST' },
+    });
+    assert.equal(opt.headers.get('access-control-allow-origin'), null);
+    r = await fetch(`${gwUrl}/api/engines`, { headers: { origin: 'http://127.0.0.1:3080' } });
+    assert.equal(r.headers.get('access-control-allow-origin'), 'http://127.0.0.1:3080');
+    console.log('  ok  CORS answers local shells only');
+
+    // 7. token gate
     r = await fetch(`http://127.0.0.1:${GATEWAY_PORT_AUTH}/api/engines`);
     assert.equal(r.status, 401);
     r = await fetch(`http://127.0.0.1:${GATEWAY_PORT_AUTH}/api/engines?token=s3cret`);
     assert.equal(r.status, 200);
     console.log('  ok  token gate rejects anonymous requests');
 
-    // 7. remove + last-engine guard
+    // 8. remove + last-engine guard
     r = await fetch(`${gwUrl}/api/engines/${pcId}`, { method: 'DELETE' });
     assert.equal((await r.json()).ok, true);
     r = await fetch(`${gwUrl}/api/engines/local`, { method: 'DELETE' });
     assert.equal((await r.json()).ok, false);
     console.log('  ok  remove works and keeps the last engine');
 
-    // 8. A second listener on the same port must degrade, never crash the host.
+    // 9. A second listener on the same port must degrade, never crash the host.
     const dup = makeGateway(GATEWAY_PORT);
     const dupAddr = await dup.listen();
     assert.equal(dupAddr, null, 'duplicate listen should resolve null, not throw');

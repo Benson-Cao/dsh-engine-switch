@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Engine switch",
+    "description": "Switch the Harness between a phone, desktop machines and server engines from an Engines panel in the left sidebar; the gateway changes only its upstream."
+  }
+}

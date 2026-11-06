@@ -81,12 +81,14 @@ $P/bin/node $H/node_modules/@deepseek-ai/dsh/lib/bin.js \
 
 ## 使用
 
+**入口在 DSH 左侧栏的「引擎」**（和「插件」「自动化任务」同一排）。点开后在主区打开切换面板：登记、删除、切换、探测都在应用内完成，不跳转新网页、不替换当前会话，主题跟随宿主深浅色。
+
 | 地址 | 作用 |
 |---|---|
-| `http://127.0.0.1:3082/__switch/` | 引擎切换页：登记、删除、切换、探测 |
+| `http://127.0.0.1:3082/__switch/` | 同一套切换页的独立版本，手机浏览器可「添加到主屏幕」 |
 | `http://127.0.0.1:3082/` | 当前引擎的 DSH 主界面（反代） |
 
-代理后的 DSH 页面左下角会注入一个「引擎」按钮，随时跳回切换页。手机浏览器可对切换页「添加到主屏幕」。
+面板通过网关的 JSON API 工作，因此需要网关在跑（插件启动后即是）。面板默认连 `http://127.0.0.1:3082`；若改了 `port`，在页面里设置 `window.__DSH_ENGINE_SWITCH__ = 'http://127.0.0.1:<新端口>'` 即可。
 
 登记三类引擎：
 
@@ -131,10 +133,12 @@ DSH Web 默认拒绝 `0.0.0.0` 绑定，服务器引擎前面必须有反代；T
 ## 实现要点
 
 - **Cordis 形态**：`package.json` 声明 `dsh.bundle.patch` 指向 `cordis.patch.yml`；`index.js` 导出 `name` + `apply(ctx, config)`；不声明 `inject`，只用 Node 内置模块，因此不耦合特定 DSH 服务版本。
+- **双半插件**：`dsh.client` 声明浏览器半边，`./client` 导出按 DSH 客户端模块表的 factory 格式编写（`window.__ModuleLoader__.load`），向 `sidebar.panellist` 注册「引擎」行、向 `main` 槽注册同 key 的面板页。工厂无副作用，样式、locale、槽位注册都由 `ctx.effect` 持有，卸载即回收。
+- **不注入、不跳转**：反代层对响应体完全零拷贝，不再改写 HTML；切换页只作为独立路由 `/__switch/` 存在。面板内切换只改网关上游，当前会话与页面都不动。
+- **跨域边界**：面板来自 DSH 页面（桌面是 `dsh://host`，`dsh web` 是 loopback origin），所以 `/api/*` 带 CORS；只回显 loopback 与 `dsh://`／`app://` 来源，其余站点的 `Origin` 一律不给凭据。
 - **可逆卸载**：listener 与所有活跃 socket 由**单个** `ctx.effect()` disposer 统一销毁，保证关闭顺序。
 - **零依赖**：只用 `node:http/https/net/tls/fs/crypto`，不需要 `npm install`。
 - **反代细节**：改写请求 `Host` / `Origin` / `Referer`，改写响应 `Set-Cookie` / `Location` / CSP；SSE 按 chunk 透传不缓冲；WebSocket 手写升级请求后走裸 TCP 双向管道（TLS 上游监听 `secureConnect`）。
-- **HTML 注入**：仅对未压缩的 `text/html` 响应缓冲并插入悬浮按钮，其它响应保持零拷贝 pipe。
 
 ## 边界与已知限制
 
@@ -151,9 +155,11 @@ DSH Web 默认拒绝 `0.0.0.0` 绑定，服务器引擎前面必须有反代；T
 ## 开发
 
 ```bash
-npm run check   # 语法检查
-npm test        # 起 mock 上游 + 网关跑端到端冒烟测试
+npm run check   # 语法检查（含 client.js）
+npm test        # 宿主半：mock 上游 + 网关端到端；客户端半：假模块表跑一次面板渲染
 ```
+
+改了 `client.js` 或 `package.json` 的 `dsh.client` 后：本地目录安装会直接生效（重开 DSH），Git 安装需要重新 `dsh plugin add` 再重启进程——bundle 与客户端模块都按进程启动时快照。
 
 ## License
 

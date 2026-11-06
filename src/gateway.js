@@ -58,6 +58,32 @@ export function createGateway(settings) {
     return q === settings.token || req.headers.authorization === `Bearer ${settings.token}`;
   }
 
+  /**
+   * The in-app panel lives on the DSH page origin (dsh://host on desktop,
+   * http://127.0.0.1:3080 when served by `dsh web`) and calls the gateway
+   * directly, so `/api/engines/*` needs CORS. Only local shells may do that:
+   * echoing any site's origin would let a random page repoint the proxy at a
+   * host of its choosing.
+   */
+  function corsOrigin(req) {
+    const origin = req.headers.origin;
+    if (typeof origin !== 'string' || !origin) return '';
+    if (/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(origin)) return origin;
+    if (/^(dsh|app|file):\/\//i.test(origin)) return origin;
+    return '';
+  }
+
+  function applyCors(req, res) {
+    const origin = corsOrigin(req);
+    if (!origin) return;
+    res.setHeader('access-control-allow-origin', origin);
+    res.setHeader('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('access-control-allow-headers',
+      req.headers['access-control-request-headers'] || 'content-type, authorization, accept');
+    res.setHeader('access-control-max-age', '600');
+    res.setHeader('vary', 'Origin');
+  }
+
   async function probeAll() {
     const out = [];
     for (const e of registry.list()) {
@@ -129,17 +155,6 @@ export function createGateway(settings) {
     return h;
   }
 
-  /** Floating "引擎" button injected into proxied DSH HTML pages. */
-  function pickerButton() {
-    const href = '/__switch/' + (settings.token
-      ? '?token=' + encodeURIComponent(settings.token) : '');
-    return '<a href="' + href + '" style="position:fixed;left:10px;bottom:10px;'
-      + 'z-index:2147483000;background:rgba(20,27,35,.88);color:#fff;'
-      + 'border:1px solid rgba(255,255,255,.18);border-radius:18px;'
-      + 'padding:7px 13px;font:12px/1.4 system-ui,sans-serif;text-decoration:none;'
-      + 'box-shadow:0 2px 8px rgba(0,0,0,.28)">引擎</a>';
-  }
-
   function proxy(req, res) {
     let upstream;
     try { upstream = new URL(registry.upstream()); }
@@ -165,27 +180,10 @@ export function createGateway(settings) {
           r.destroy();
           return;
         }
-        const ct = String(r.headers['content-type'] || '');
-        // Only small uncompressed HTML documents are buffered for injection.
-        // SSE / chunked / binary responses keep the zero-copy pipe below.
-        if (ct.includes('text/html') && !r.headers['content-encoding']) {
-          const chunks = [];
-          r.on('data', c => chunks.push(c));
-          r.on('end', () => {
-            let body = Buffer.concat(chunks).toString('utf8');
-            const btn = pickerButton();
-            body = /<\/body>/i.test(body)
-              ? body.replace(/<\/body>/i, btn + '</body>')
-              : body + btn;
-            headers['content-length'] = Buffer.byteLength(body);
-            delete headers['transfer-encoding'];
-            res.writeHead(r.statusCode || 200, headers);
-            res.end(body);
-          });
-          return;
-        }
         res.writeHead(r.statusCode || 502, headers);
-        r.pipe(res);   // SSE / streaming responses pass through without buffering
+        // Zero-copy for every response: the proxy never needs to look at the
+        // body, so HTML / SSE / chunked / binary all stream through untouched.
+        r.pipe(res);
       });
     } catch (e) {
       if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain' });
@@ -237,10 +235,21 @@ export function createGateway(settings) {
   }
 
   async function handle(req, res) {
-    if (!authorized(req)) return json(res, 401, { ok: false, error: 'token required' });
     let url;
     try { url = new URL(req.url, localOrigin); }
     catch (e) { return json(res, 400, { ok: false, error: 'bad URL' }); }
+
+    // The in-app panel calls these endpoints from the DSH page origin, and a
+    // preflight carries no credentials, so CORS answers before the token gate.
+    if (url.pathname.startsWith('/api/')) {
+      applyCors(req, res);
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, { 'content-length': 0 });
+        return res.end();
+      }
+    }
+
+    if (!authorized(req)) return json(res, 401, { ok: false, error: 'token required' });
 
     try {
       // "/" belongs to the DSH frontend (proxied). The picker lives on its own
